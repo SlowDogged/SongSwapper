@@ -1,6 +1,6 @@
 # SongSwapper
 
-A GUI tool for swapping osu! beatmap audio with BPM based compatible songs.
+A GUI based tool for swapping osu! beatmap audio with BPM based compatible songs.
 
 ## Features
 
