@@ -6,6 +6,7 @@ A GUI based tool for swapping osu! beatmap audio with BPM based compatible songs
 
 - Scan osu! Songs folder
 - Find same / half / double BPM maps
+- Auto speed up or slow-down songs to match the BPM
 - AAuto align audio by first playable object
 - Ignore spinners for first-note detection
 - Preserve `.osu` AudioFilename
