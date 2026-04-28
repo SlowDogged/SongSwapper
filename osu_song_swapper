@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="$SCRIPT_DIR/.venv"
+
+cd "$SCRIPT_DIR"
+
+PYTHON_BIN=${PYTHON_BIN:-python3}
+
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating local virtual environment..."
+    "$PYTHON_BIN" -m venv "$VENV_DIR"
+
+    source "$VENV_DIR/bin/activate"
+
+    echo "Installing dependencies..."
+    pip install --upgrade pip
+    pip install -r requirements.txt
+else
+    source "$VENV_DIR/bin/activate"
+fi
+
+python osu_song_swapper.py "$@"
