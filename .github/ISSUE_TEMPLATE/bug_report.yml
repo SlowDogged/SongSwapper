@@ -1,16 +1,8 @@
 name: Bug report
-description: Report a broken issue in osu!Radio.
+description: Report a broken issue in SongSwapper.
 assignees: ParaliyzedEvo
 body:
 
-  - type: dropdown
-    attributes:
-      label: Updater or the app itself?
-      options:
-        - App
-        - Updater
-    validations:
-      required: true
   - type: dropdown
     attributes:
       label: Type
