@@ -1,0 +1,328 @@
+name: osu!Radio
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '[0-9]*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest, macos-latest-large]
+    name: Build on ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/pip
+            ~/Library/Caches/pip
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+          
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get update
+            sudo apt-get install -y \
+              libxcb-xkb1 \
+              libxcb-image0 \
+              libxcb-cursor0 \
+              libxcb-render-util0 \
+              libxcb-shape0 \
+              libxcb-icccm4 \
+              libxcb-keysyms1 \
+              libxkbcommon-x11-0 \
+              libpulse0 \
+              xvfb
+            
+            echo "DISPLAY=:99" >> $GITHUB_ENV
+            nohup Xvfb :99 -screen 0 1024x768x16 > /dev/null 2>&1 &
+          fi
+        shell: bash
+
+      - name: Cache ffmpeg_bin
+        id: cache-ffmpeg
+        uses: actions/cache@v5
+        with:
+          path: osuRadio/ffmpeg_bin
+          key: ${{ runner.os }}-ffmpeg_bin-v1
+
+      - name: Install ffmpeg_bin
+        if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
+        run: |
+          pip install gdown
+          gdown https://drive.google.com/drive/folders/12uT8tAtQgsXxbXDR9YicvKqeOgL2ORwZ -O osuRadio/ffmpeg_bin --folder
+
+      - name: Cache macOS icon
+        id: cache-macos-icon
+        if: startsWith(matrix.os, 'macos-')
+        uses: actions/cache@v5
+        with:
+          path: osuRadio/Osu!RadioIcon.icns
+          key: macos-icon-${{ hashFiles('osuRadio/Osu!RadioIcon.png') }}
+
+      - name: Convert .png to .icns (macOS only)
+        if: startsWith(matrix.os, 'macos-') && steps.cache-macos-icon.outputs.cache-hit != 'true'
+        run: |
+          brew install imagemagick
+          cd "osuRadio"
+          ICON_NAME="Osu!RadioIcon"
+          ICONSET="${ICON_NAME}.iconset"
+          mkdir -p "$ICONSET"
+          magick "$ICON_NAME.png" "$ICONSET/icon_1024x1024.png"
+          sips -z 16 16     "$ICONSET/icon_1024x1024.png" --out "$ICONSET/icon_16x16.png"
+          sips -z 32 32     "$ICONSET/icon_1024x1024.png" --out "$ICONSET/icon_16x16@2x.png"
+          sips -z 32 32     "$ICONSET/icon_1024x1024.png" --out "$ICONSET/icon_32x32.png"
+          sips -z 64 64     "$ICONSET/icon_1024x1024.png" --out "$ICONSET/icon_32x32@2x.png"
+          sips -z 128 128   "$ICONSET/icon_1024x1024.png" --out "$ICONSET/icon_128x128.png"
+          sips -z 256 256   "$ICONSET/icon_1024x1024.png" --out "$ICONSET/icon_128x128@2x.png"
+          sips -z 256 256   "$ICONSET/icon_1024x1024.png" --out "$ICONSET/icon_256x256.png"
+          sips -z 512 512   "$ICONSET/icon_1024x1024.png" --out "$ICONSET/icon_256x256@2x.png"
+          sips -z 512 512   "$ICONSET/icon_1024x1024.png" --out "$ICONSET/icon_512x512.png"
+          cp "$ICONSET/icon_1024x1024.png" "$ICONSET/icon_512x512@2x.png"
+          iconutil -c icns "$ICONSET" -o "${ICON_NAME}.icns"
+          rm -r "$ICONSET"
+
+      - name: Build updater (Windows and Linux)
+        if: matrix.os != 'macos-latest' && matrix.os != 'macos-latest-large'
+        run: |
+          pyinstaller updater.py --onefile
+
+      - name: Install lazer dependencies
+        run: |
+          cd lazer
+          npm install
+
+      - name: Build lazer (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd lazer
+          npm run build:win
+          mkdir -p dist/prebuilds/node
+          cp node_modules/realm/prebuilds/node/realm.node dist/prebuilds/node/realm.node
+
+      - name: Build lazer (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cd lazer
+          npm run build:linux
+          mkdir -p dist/prebuilds/node
+          cp node_modules/realm/prebuilds/node/realm.node dist/prebuilds/node/realm.node
+
+      - name: Build lazer (macOS x64)
+        if: matrix.os == 'macos-latest-large'
+        run: |
+          cd lazer
+          npm run build:mac-x64
+          mkdir -p dist/prebuilds/node
+          cp node_modules/realm/prebuilds/node/realm.node dist/prebuilds/node/realm.node
+
+      - name: Build lazer (macOS ARM64)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd lazer
+          npm run build:mac-arm64
+          mkdir -p dist/prebuilds/node
+          cp node_modules/realm/prebuilds/node/realm.node dist/prebuilds/node/realm.node
+
+      - name: Build app (Windows)
+        if: matrix.os == 'windows-latest'
+        run: pyinstaller Osu!Radio.spec --clean
+
+      - name: Build app (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: pyinstaller Osu!Radio-linux.spec --clean
+
+      - name: Build app (macOS ARM)
+        if: matrix.os == 'macos-latest'
+        run: pyinstaller Osu!Radio-macos.spec --clean --distpath dist-arm
+
+      - name: Build app (macOS Intel)
+        if: matrix.os == 'macos-latest-large'
+        run: pyinstaller Osu!Radio-macos.spec --clean --distpath dist-x64
+
+      - name: Package output (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          Copy-Item -Path "lazer/dist/*" -Destination "dist/osu!Radio/_internal/" -Recurse -Force
+          7z a osu!Radio-windows.zip dist/osu!Radio/*
+
+      - name: Package output (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir -p 'osu!Radio-linux'
+          cp -r 'dist/osu!Radio' 'osu!Radio-linux/'
+          cp -r 'osuRadio/Background Video' 'osu!Radio-linux/'
+          cp -r 'osuRadio/ffmpeg_bin' 'osu!Radio-linux/'
+          cp -r 'osuRadio/img' 'osu!Radio-linux/'
+          cp 'dist/updater' 'osu!Radio-linux'
+          cp -r lazer/dist/. osu!Radio-linux/
+          cp 'osuRadio/Osu!RadioIcon.png' 'osu!Radio-linux/'
+          tar -czf 'osu!Radio.tar.gz' -C 'osu!Radio-linux' .
+
+      - name: Package output (macOS)
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-latest-large'
+        run: |
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            DIST_PATH="dist-arm"
+          else
+            DIST_PATH="dist-x64"
+          fi
+          cp -r 'osuRadio/Background Video' "${DIST_PATH}/osu!Radio.app/Contents/Resources/"
+          cp -r 'osuRadio/ffmpeg_bin' "${DIST_PATH}/osu!Radio.app/Contents/Resources/"
+          cp -r 'osuRadio/img' "${DIST_PATH}/osu!Radio.app/Contents/Resources/"
+          cp -r lazer/dist/. "${DIST_PATH}/osu!Radio.app/Contents/Resources/"
+
+      - name: Upload build artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v6
+        with:
+          name: osu!Radio-windows
+          path: dist/osu!Radio/
+
+      - name: Upload build artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v6
+        with:
+          name: osu!Radio-linux
+          path: osu!Radio-linux/
+
+      - name: Upload build artifacts (macOS ARM)
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v6
+        with:
+          name: osu!Radio-macos-arm
+          path: dist-arm/osu!Radio.app
+          retention-days: 1
+
+      - name: Upload build artifacts (macOS x64)
+        if: matrix.os == 'macos-latest-large'
+        uses: actions/upload-artifact@v6
+        with:
+          name: osu!Radio-macos-x64
+          path: dist-x64/osu!Radio.app
+          retention-days: 1
+
+      - name: Upload Release Asset (Windows)
+        if: startsWith(github.ref, 'refs/tags/') && matrix.os == 'windows-latest'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          files: osu!Radio-windows.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Asset (Linux)
+        if: startsWith(github.ref, 'refs/tags/') && matrix.os == 'ubuntu-latest'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          files: osu!Radio.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  create-universal-macos:
+    needs: build
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      
+      - name: Download ARM build
+        uses: actions/download-artifact@v8
+        with:
+          name: osu!Radio-macos-arm
+          path: dist-arm/osu!Radio.app
+      
+      - name: Download Intel build
+        uses: actions/download-artifact@v8
+        with:
+          name: osu!Radio-macos-x64
+          path: dist-x64/osu!Radio.app
+      
+      - name: Create universal binary
+        run: |
+          mkdir -p dist-universal/osu!Radio.app/Contents/MacOS
+          cp -r dist-arm/osu!Radio.app/* dist-universal/osu!Radio.app/
+          find dist-arm/osu!Radio.app/Contents/MacOS -type f -perm +111 | while read arm_bin; do
+            rel_path="${arm_bin#dist-arm/osu!Radio.app/Contents/MacOS/}"
+            x64_bin="dist-x64/osu!Radio.app/Contents/MacOS/$rel_path"
+            out_bin="dist-universal/osu!Radio.app/Contents/MacOS/$rel_path"
+            
+            if [ -f "$x64_bin" ]; then
+              echo "Creating universal binary for: $rel_path"
+              lipo -create "$arm_bin" "$x64_bin" -output "$out_bin"
+            fi
+          done
+      
+      - name: Install create-dmg
+        run: brew install create-dmg
+      
+      - name: Create universal .dmg
+        run: |
+          create-dmg \
+            --volname "osu!Radio Installer" \
+            --volicon "dist-universal/osu!Radio.app/Contents/Resources/Osu!RadioIcon.icns" \
+            --window-pos 200 120 \
+            --window-size 854 480 \
+            --icon-size 100 \
+            --app-drop-link 450 185 \
+            osu!Radio.dmg \
+            dist-universal/osu!Radio.app
+      
+      - name: Create universal .pkg
+        run: |
+          pkgbuild \
+            --root dist-universal/osu!Radio.app \
+            --identifier com.paraliyzedevo.osuradio \
+            --version 1.9.2 \
+            --install-location /Applications \
+            osu!Radio.pkg
+
+      - name: Upload build artifacts (macOS)
+        uses: actions/upload-artifact@v6
+        with:
+          name: osu!Radio-macos
+          path: |
+            osu!Radio.pkg
+            osu!Radio.dmg
+
+      - name: Upload Release Assets (macOS)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          files: |
+            osu!Radio.pkg
+            osu!Radio.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

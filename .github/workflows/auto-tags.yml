@@ -1,0 +1,74 @@
+name: Auto-Label Issues
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  auto-label:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+
+    steps:
+      - name: Auto-assign labels and comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body
+
+            const existing = issue.labels.map(l => l.name.toLowerCase());
+            const toAdd = new Set();
+
+            // Helper to extract the dropdown value under a given heading
+            function extractValue(title) {
+              const regex = new RegExp(`### ${title}[\\s\\S]*?\\n([^#\\n]+)`, "i");
+              const match = body.match(regex);
+              return match ? match[1].trim() : null;
+            }
+
+            // --- Extract dropdowns ---
+            const appOrUpdater = extractValue("Updater or the app itself\\?");
+            const type = extractValue("Type");
+            const os = extractValue("What OS are you running\\?");
+
+            // --- App vs Updater labels ---
+            if (appOrUpdater === "App") toAdd.add("app");
+            if (appOrUpdater === "Updater") toAdd.add("updater");
+
+            // --- Type labels ---
+            if (type === "Crash to desktop") toAdd.add("bug");
+            if (type === "App behaviour") toAdd.add("bug");
+            if (type === "Performance") toAdd.add("enhancement");
+            if (type === "Cosmetic") toAdd.add("enhancement");
+            if (type === "Other") toAdd.add("bug");
+
+            // --- OS labels ---
+            if (os === "Windows") toAdd.add("windows");
+            if (os === "macOS") toAdd.add("macOS");
+            if (os === "Linux") toAdd.add("linux");
+
+            // Filter duplicates
+            const finalLabels = [...toAdd].filter(l => !existing.includes(l.toLowerCase()));
+
+            // Add labels if needed
+            if (finalLabels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: finalLabels
+              });
+            }
+
+            // Add auto-comment on new issues
+            if (context.payload.action === "opened") {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: "@ParaliyzedEvo will help you as soon as possible!"
+              });
+            }

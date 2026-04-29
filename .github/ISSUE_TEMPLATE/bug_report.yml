@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a broken issue in osu!Radio.
+assignees: ParaliyzedEvo
+body:
+
+  - type: dropdown
+    attributes:
+      label: Updater or the app itself?
+      options:
+        - App
+        - Updater
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Type
+      description: What type of bug is it?
+      options:
+        - Crash to desktop
+        - App behaviour
+        - Performance
+        - Cosmetic
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Bug description
+      description: How did you find the bug and what causes it?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Screenshots or videos
+      description: Add screenshots or videos that show the bug here.
+      placeholder: Drag and drop the screenshots/videos into this box.
+    validations:
+      required: false
+  - type: input
+    attributes:
+      label: Version
+      description: The version you encountered this bug on. This is shown at the end of the settings overlay.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: What OS are you running?
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Additional information
+      description: Any additional details that might help?
+    validations:
+      required: false
