@@ -1,3 +1,5 @@
+[![CodeFactor](https://www.codefactor.io/repository/github/slowDogged/songSwapper/badge)](https://www.codefactor.io/repository/github/slowDogged/songSwapper)
+
 # SongSwapper
 
 A GUI based tool for swapping osu! beatmap audio with BPM based compatible songs.
@@ -28,3 +30,14 @@ A GUI based tool for swapping osu! beatmap audio with BPM based compatible songs
 4. Pick Beatmap A
 5. Pick Beatmap B
 6. Click Create Changed Map Audio
+
+
+## Star History
+
+<a href="https://www.star-history.com/#ParaliyzedEvo/SonotaOverlay&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ParaliyzedEvo/SonotaOverlay&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ParaliyzedEvo/SonotaOverlay&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ParaliyzedEvo/SonotaOverlay&type=date&legend=top-left" />
+ </picture>
+</a>
