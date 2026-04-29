@@ -221,7 +221,7 @@ jobs:
           pkgbuild \
             --root dist-universal/SongSwapper.app \
             --identifier com.paraliyzedevo.songswapper \
-            --version 1.9.2 \
+            --version 1.1.0 \
             --install-location /Applications \
             SongSwapper.pkg
 
