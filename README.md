@@ -15,9 +15,10 @@ A GUI based tool for swapping osu! beatmap audio with BPM based compatible songs
 
 ## Requirements
 
-- Windows
-- ffmpeg.exe included beside the program
-- some machienes may not work with the ffmpeg packaged inside the program, so try installing ffmpeg by following this guide: https://www.youtube.com/watch?v=JR36oH35Fgg
+- Supports all OS
+~~- ffmpeg.exe included beside the program~~
+~~- some machienes may not work with the ffmpeg packaged inside the program, so try installing ffmpeg by following this guide: https://www.youtube.com/watch?v=JR36oH35Fgg~~
+- ffmpeg is now included in the built binaries
 
 ## Usage
 
