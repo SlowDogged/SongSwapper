@@ -24,7 +24,7 @@ A GUI based tool for swapping osu! beatmap audio with BPM based compatible songs
 
 ## Usage
 
-1. Open osu-audio-swapper.exe
+1. Open SongSwapper binary
 2. Select your osu! Songs folder
 3. Click Fast Scan / Rescan
 4. Pick Beatmap A
